@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [dragging, setDragging] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [errorText, setErrorText] = useState("");
+  const sessionDocIds = useRef<Set<string>>(new Set());
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -79,11 +80,60 @@ export default function DashboardPage() {
       throw new Error("Unable to load documents");
     }
     const data = await res.json();
-    const nextDocs: DocumentItem[] = data.documents ?? [];
+    const allDocs: DocumentItem[] = data.documents ?? [];
+    const nextDocs = allDocs.filter((d) => sessionDocIds.current.has(d.document_id));
     setDocuments(nextDocs);
     if (!selectedDocumentId && nextDocs.length > 0) {
       setSelectedDocumentId(nextDocs[0].document_id);
     }
+    return nextDocs;
+  }
+
+  async function autoProcessDocuments(docs: DocumentItem[]) {
+    const uploaded = docs.filter((d) => d.status === "uploaded");
+    for (const doc of uploaded) {
+      try {
+        await fetch(apiUrl("/api/process-existing"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ document_id: doc.document_id }),
+        });
+      } catch {
+        // ignore individual failures
+      }
+    }
+    if (uploaded.length > 0) {
+      await loadDocuments();
+    }
+  }
+
+  async function deleteDocument(documentId: string) {
+    try {
+      const res = await fetch(apiUrl(`/documents/${documentId}`), { method: "DELETE" });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Delete failed");
+      }
+      setMessagesByDocument((prev) => {
+        const next = { ...prev };
+        delete next[documentId];
+        return next;
+      });
+      if (selectedDocumentId === documentId) {
+        setSelectedDocumentId("");
+      }
+      await loadDocuments();
+    } catch (err) {
+      setErrorText(formatFetchError(err));
+    }
+  }
+
+  function clearChat() {
+    if (!selectedDocumentId) return;
+    setMessagesByDocument((prev) => ({
+      ...prev,
+      [selectedDocumentId]: [welcomeMessage],
+    }));
   }
 
   async function uploadPdf(file: File) {
@@ -111,6 +161,7 @@ export default function DashboardPage() {
       }
 
       const data = await res.json();
+      sessionDocIds.current.add(data.document_id);
       setSelectedDocumentId(data.document_id);
       setStatusText(`Ready: ${data.document_name}`);
       await loadDocuments();
@@ -160,11 +211,7 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => {
-    loadDocuments().catch((err) => {
-      setErrorText(formatFetchError(err));
-    });
-  }, []);
+  // Documents load only after user uploads a new PDF — dashboard starts clean.
 
   useEffect(() => {
     const el = messagesRef.current;
@@ -244,27 +291,42 @@ export default function DashboardPage() {
 
             <div className="space-y-2 overflow-y-auto pr-1">
               {documents.map((doc) => (
-                <button
+                <div
                   key={doc.document_id}
-                  onClick={() => setSelectedDocumentId(doc.document_id)}
-                  className={`w-full rounded-xl border p-3 text-left transition ${
+                  className={`group relative w-full rounded-xl border p-3 text-left transition ${
                     selectedDocumentId === doc.document_id
                       ? "border-brandPurple/60 bg-brandPurple/15"
                       : "border-white/10 bg-white/[0.04] hover:border-brandBlue/40"
                   }`}
                 >
-                  <p className="truncate text-sm font-semibold">{doc.name}</p>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-xs text-slate-400">{(doc.size_bytes / (1024 * 1024)).toFixed(2)} MB</span>
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
-                        doc.status === "ready" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"
-                      }`}
-                    >
-                      {doc.status}
-                    </span>
-                  </div>
-                </button>
+                  <button
+                    onClick={() => setSelectedDocumentId(doc.document_id)}
+                    className="w-full text-left"
+                  >
+                    <p className="truncate pr-7 text-sm font-semibold">{doc.name}</p>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-xs text-slate-400">{(doc.size_bytes / (1024 * 1024)).toFixed(2)} MB</span>
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                          doc.status === "ready" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"
+                        }`}
+                      >
+                        {doc.status}
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void deleteDocument(doc.document_id);
+                    }}
+                    className="absolute right-2 top-2 hidden rounded-lg p-1.5 text-slate-400 transition hover:bg-red-500/20 hover:text-red-300 group-hover:block"
+                    aria-label="Delete document"
+                    title="Delete document"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  </button>
+                </div>
               ))}
 
               {documents.length === 0 ? <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">No documents yet.</div> : null}
@@ -278,7 +340,18 @@ export default function DashboardPage() {
               <h1 className="text-lg font-bold">AI Chat</h1>
               <p className="text-xs text-slate-300">Context: {selectedDocument?.name ?? "None"}</p>
             </div>
-            {statusText ? <span className="rounded-full border border-brandBlue/30 bg-brandBlue/10 px-3 py-1 text-xs text-brandBlue">{statusText}</span> : null}
+            <div className="flex items-center gap-2">
+              {statusText ? <span className="rounded-full border border-brandBlue/30 bg-brandBlue/10 px-3 py-1 text-xs text-brandBlue">{statusText}</span> : null}
+              {selectedDocumentId && activeMessages.length > 1 ? (
+                <button
+                  onClick={clearChat}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+                  title="Clear chat"
+                >
+                  Clear Chat
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div ref={messagesRef} className="relative flex-1 overflow-y-auto p-5">

@@ -14,7 +14,7 @@ from app.config import get_settings
 from rag.rag_chain import answer_with_rerank
 from retrieval.retriever import build_retriever
 from utils.helpers import save_uploaded_pdf
-from vectorstore.manager import build_or_load_store_for_pdf
+from vectorstore.manager import build_or_load_store_for_pdf, _index_dir_for_pdf
 
 
 settings = get_settings()
@@ -226,3 +226,32 @@ def chat(request: AskRequest) -> dict:
 @app.post("/ask")
 def ask(request: AskRequest) -> dict:
     return chat(request)
+
+
+class DeleteDocumentRequest(BaseModel):
+    document_id: str = Field(min_length=1)
+
+
+@app.delete("/api/documents/{document_id}")
+def delete_document(document_id: str) -> dict:
+    pdf_path = _path_for_document_id(document_id)
+
+    # Remove FAISS index directory
+    index_dir = _index_dir_for_pdf(pdf_path, settings.vector_db_dir)
+    if index_dir.exists():
+        import shutil
+        shutil.rmtree(index_dir, ignore_errors=True)
+
+    # Remove in-memory context
+    with state._lock:
+        state._contexts.pop(document_id, None)
+
+    # Remove the PDF file
+    pdf_path.unlink(missing_ok=True)
+
+    return {"ok": True, "document_id": document_id}
+
+
+@app.delete("/documents/{document_id}")
+def delete_document_public(document_id: str) -> dict:
+    return delete_document(document_id)
