@@ -292,13 +292,7 @@ npm install
 npm run dev
 ```
 
-### 4. Open the App
 
-| Page | URL |
-|------|-----|
-| Landing Page | `http://localhost:3000` |
-| Chat Dashboard | `http://localhost:3000/dashboard` |
-| API Health Check | `http://localhost:8000/api/health` |
 
 ---
 
