@@ -1,5 +1,26 @@
 from __future__ import annotations
 
+import os
+from dotenv import load_dotenv
+
+# Load .env and set LangSmith tracing BEFORE any LangChain imports
+load_dotenv()
+if os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true":
+    os.environ.setdefault("LANGSMITH_TRACING", "true")
+    os.environ.setdefault("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+    if os.getenv("LANGCHAIN_API_KEY"):
+        os.environ.setdefault("LANGSMITH_API_KEY", os.environ["LANGCHAIN_API_KEY"])
+    if os.getenv("LANGCHAIN_PROJECT"):
+        os.environ.setdefault("LANGSMITH_PROJECT", os.environ["LANGCHAIN_PROJECT"])
+
+if os.getenv("LANGSMITH_TRACING", "false").lower() == "true":
+    os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+    os.environ.setdefault("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+    if os.getenv("LANGSMITH_API_KEY"):
+        os.environ.setdefault("LANGCHAIN_API_KEY", os.environ["LANGSMITH_API_KEY"])
+    if os.getenv("LANGSMITH_PROJECT"):
+        os.environ.setdefault("LANGCHAIN_PROJECT", os.environ["LANGSMITH_PROJECT"])
+
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
@@ -9,6 +30,13 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
+try:
+    from langsmith import traceable
+except Exception:  # pragma: no cover
+    def traceable(*args, **kwargs):
+        def _wrap(func):
+            return func
+        return _wrap
 
 from app.config import get_settings
 from rag.rag_chain import answer_with_rerank
@@ -18,6 +46,7 @@ from vectorstore.manager import build_or_load_store_for_pdf, _index_dir_for_pdf
 
 
 settings = get_settings()
+
 app = FastAPI(title="QA RAG API", version="1.0.0")
 
 app.add_middleware(
@@ -188,6 +217,7 @@ def process_existing(request: ProcessExistingRequest) -> dict:
 
 
 @app.post("/api/chat")
+@traceable(name="dashboard_chat", run_type="chain")
 def chat(request: AskRequest) -> dict:
     context = state.get_context(request.document_id)
     if not context:

@@ -18,6 +18,9 @@ class Settings:
     top_k: int
     raw_pdfs_dir: Path
     vector_db_dir: Path
+    langchain_tracing: bool
+    langchain_api_key: str
+    langchain_project: str
 
 
 
@@ -34,4 +37,7 @@ def get_settings() -> Settings:
         top_k=int(os.getenv("TOP_K", "4")),
         raw_pdfs_dir=project_root / "data" / "raw_pdfs",
         vector_db_dir=project_root / "data" / "vector_db",
+        langchain_tracing=os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true",
+        langchain_api_key=os.getenv("LANGCHAIN_API_KEY", ""),
+        langchain_project=os.getenv("LANGCHAIN_PROJECT", "QA-RAG-System"),
     )

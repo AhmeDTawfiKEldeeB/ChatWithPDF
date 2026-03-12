@@ -6,6 +6,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import ParticleBackground from "../../components/ParticleBackground";
 import TypingDots from "../../components/TypingDots";
+import TypingMessage from "../../components/TypingMessage";
 
 type DocumentItem = {
   document_id: string;
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   const [statusText, setStatusText] = useState("");
   const [errorText, setErrorText] = useState("");
   const sessionDocIds = useRef<Set<string>>(new Set());
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +101,7 @@ export default function DashboardPage() {
           body: JSON.stringify({ document_id: doc.document_id }),
         });
       } catch {
-        // ignore individual failures
+       
       }
     }
     if (uploaded.length > 0) {
@@ -203,6 +205,7 @@ export default function DashboardPage() {
 
       const data = await res.json();
       appendMessage(activeDocumentId, { role: "assistant", content: data.answer });
+      setTypingMessageId(`assistant-${(messagesByDocument[activeDocumentId]?.length ?? 1) + 1}`);
     } catch (err) {
       const message = formatFetchError(err);
       appendMessage(activeDocumentId, { role: "assistant", content: `Error: ${message}` });
@@ -211,7 +214,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Documents load only after user uploads a new PDF — dashboard starts clean.
 
   useEffect(() => {
     const el = messagesRef.current;
@@ -365,7 +367,7 @@ export default function DashboardPage() {
                   className={`mb-4 flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    className={`w-fit max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                       message.role === "user"
                         ? "bg-gradient-to-r from-brandPurple to-brandBlue text-white"
                         : "border border-white/10 bg-white/[0.05] text-slate-100"
@@ -384,15 +386,8 @@ export default function DashboardPage() {
             </AnimatePresence>
 
             {retrieving ? (
-              <div className="mb-3 inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm">
+              <div className="mb-3 inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-slate-400">
                 <TypingDots />
-              </div>
-            ) : null}
-
-            {retrieving ? (
-              <div className="grid gap-2">
-                <div className="h-10 w-[70%] animate-pulse rounded-xl bg-white/10" />
-                <div className="h-10 w-[55%] animate-pulse rounded-xl bg-white/10" />
               </div>
             ) : null}
           </div>

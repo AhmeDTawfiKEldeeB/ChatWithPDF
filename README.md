@@ -32,11 +32,12 @@ No hallucinations. No guessing. Just answers backed by your own data.
 
 ## Demo
 
-| Landing Page | Chat Dashboard |
-|:---:|:---:|
-| ![Landing](https://via.placeholder.com/400x250?text=Landing+Page) | ![Dashboard](https://via.placeholder.com/400x250?text=Chat+Dashboard) |
+### Landing Page
+![Landing](./screenshots/landing.png)
 
-> Replace the placeholder images with actual screenshots of your app.
+### Chat Dashboard
+![Dashboard](./screenshots/dashboard.png)
+
 
 ---
 
