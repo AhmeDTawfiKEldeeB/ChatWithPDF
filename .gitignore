@@ -28,4 +28,3 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 docker-data/
-/screenshots/

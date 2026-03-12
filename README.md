@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📚 EasyStudy — QA-RAG System
+# 📚 ChatWithPDF-RAG-System
 
 **Ask questions about your PDFs and get accurate, context-grounded answers powered by RAG.**
 
@@ -17,7 +17,7 @@
 
 ## What is This?
 
-EasyStudy is a full-stack **Retrieval-Augmented Generation (RAG)** application. Upload any PDF, and the system will:
+ChatWithPDF is a  **Retrieval-Augmented Generation (RAG)** application. Upload any PDF, and the system will:
 
 1. **Extract & clean** the text from your document
 2. **Split** it into smart, overlapping chunks
@@ -31,9 +31,6 @@ No hallucinations. No guessing. Just answers backed by your own data.
 ---
 
 ## Demo
-
-### Landing Page
-![Landing](./screenshots/landing.png)
 
 ### Chat Dashboard
 ![Dashboard](./screenshots/dashboard.png)
