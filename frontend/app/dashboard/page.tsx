@@ -23,7 +23,7 @@ type ChatMessage = {
 const welcomeMessage: ChatMessage = {
   role: "assistant",
   content:
-    "Welcome to EasyStudy. Ask any question about your document.",
+    "Welcome to ChatWithPDF. Ask any question about your document.",
 };
 
 const apiBase = (process.env.NEXT_PUBLIC_API_BASE ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -233,7 +233,7 @@ export default function DashboardPage() {
             AI
           </div>
           <div>
-            <p className="text-lg font-bold">EasyStudy</p>
+            <p className="text-lg font-bold">ChatWithPDF</p>
             <p className="text-xs text-slate-300">Production RAG dashboard</p>
           </div>
         </div>
