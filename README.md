@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📚 EasyStudy — QA-RAG System
+# 📚 ChatWithPDF-RAG-System
 
 **Ask questions about your PDFs and get accurate, context-grounded answers powered by RAG.**
 
